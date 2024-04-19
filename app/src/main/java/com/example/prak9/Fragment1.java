@@ -13,8 +13,14 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 public class Fragment1 extends Fragment {
 
@@ -29,16 +35,11 @@ public class Fragment1 extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_1, container, false);
 
-        // Инициализируем ExecutorService с фиксированным количеством потоков
         executor = Executors.newFixedThreadPool(4);
-
-        // Находим элементы пользовательского интерфейса
         Button startButton = rootView.findViewById(R.id.start_button);
         Button stopButton = rootView.findViewById(R.id.stop_button);
         statusTextView = rootView.findViewById(R.id.status_text_view);
         secondsPassedTextView = rootView.findViewById(R.id.seconds_passed_text_view);
-
-        // Устанавливаем обработчики нажатия кнопок
         startButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -52,54 +53,91 @@ public class Fragment1 extends Fragment {
                 stopTasks();
             }
         });
-
-        // Запускаем поток для увеличения переменной secondsPassed каждую секунду
         startCounterThread();
         Button button_second = rootView.findViewById(R.id.button_to_second_screen);
         button_second.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // Создание экземпляра второго фрагмента
                 Fragment2 fragment2 = new Fragment2();
-
-                // Получение менеджера фрагментов и начало транзакции
                 FragmentManager fragmentManager = getParentFragmentManager();
                 FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-
-                // Замена текущего фрагмента на второй фрагмент
                 fragmentTransaction.replace(R.id.fragment_container, fragment2);
-
-                // Добавление транзакции в стек возврата
                 fragmentTransaction.addToBackStack(null);
-
-                // Завершение транзакции
                 fragmentTransaction.commit();
             }
         });
+        Runnable runnableTask = () -> {
+            try {
+                TimeUnit.MILLISECONDS.sleep(300);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        };
+
+        Callable<String> callableTask = () -> {
+            try {
+                TimeUnit.MILLISECONDS.sleep(300);
+                return "Task's execution";
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            return null;
+        };
+
+        List<Callable<String>> callableTasks = new ArrayList<>();
+        callableTasks.add(callableTask);
+        callableTasks.add(callableTask);
+        callableTasks.add(callableTask);
+
+        // Примеры использования submit(), invokeAny(), invokeAll(), execute() и shutdown()
+        executor.submit(runnableTask);
+        executor.execute(() -> {
+            try {
+                TimeUnit.MILLISECONDS.sleep(300);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+
+        try {
+            String result = executor.invokeAny(callableTasks);
+            System.out.println("Result of any task: " + result);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        try {
+            List<Future<String>> futures = executor.invokeAll(callableTasks);
+            List<String> results = new ArrayList<>();
+            for (Future<String> future : futures) {
+                results.add(future.get());
+            }
+            for (String result : results) {
+                System.out.println("Result of task: " + result);
+            }
+        } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace();
+        }
+
 
         return rootView;
     }
 
     private void startCounterThread() {
         isCounterRunning = true;
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while (isCounterRunning) {
-                    try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    secondsPassed++;
-                    // Обновляем UI через главный поток активности
-                    getActivity().runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            secondsPassedTextView.setText("Seconds passed: " + secondsPassed);
-                        }
-                    });
+        new Thread(() -> {
+            while (isCounterRunning) {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
+                secondsPassed++;
+                // Обновляем UI через главный поток активности
+                getActivity().runOnUiThread(() -> {
+                    secondsPassedTextView.setText("Seconds passed: " + secondsPassed);
+                });
+
             }
         }).start();
     }
@@ -108,30 +146,20 @@ public class Fragment1 extends Fragment {
         // Проверяем, что ExecutorService не завершен
         if (!executor.isShutdown()) {
             // Добавляем задачу в ExecutorService
-            executor.submit(new Runnable() {
-                @Override
-                public void run() {
-                    // Псевдо-работа для задачи
-                    getActivity().runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            statusTextView.setText("Task started");
-                        }
-                    });
+            executor.submit(() -> {
+                getActivity().runOnUiThread(() -> {
+                    statusTextView.setText("Task started");
+                });
 
-                    try {
-                        Thread.sleep(2000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-
-                    getActivity().runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            statusTextView.setText("Task completed");
-                        }
-                    });
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
+
+                getActivity().runOnUiThread(() -> {
+                    statusTextView.setText("Task completed");
+                });
             });
         } else {
             // Обработка ситуации, когда ExecutorService уже завершен
@@ -155,3 +183,4 @@ public class Fragment1 extends Fragment {
         isCounterRunning = false;
     }
 }
+

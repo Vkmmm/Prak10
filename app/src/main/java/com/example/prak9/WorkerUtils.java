@@ -45,15 +45,15 @@ public class WorkerUtils {
     }
 
     // Метод для создания уведомления о статусе
-    public static void makeStatusNotification(String message, Context context) {
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, "channel_id")
-                .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle("Work Status")
-                .setContentText(message)
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT);
-
-        NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
-        notificationManager.notify(1, builder.build());
-    }
+//    public static void makeStatusNotification(String message, Context context) {
+//        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, "channel_id")
+//                .setSmallIcon(R.drawable.ic_notification)
+//                .setContentTitle("Work Status")
+//                .setContentText(message)
+//                .setPriority(NotificationCompat.PRIORITY_DEFAULT);
+//
+//        NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
+//        notificationManager.notify(1, builder.build());
+//    }
 }
 
